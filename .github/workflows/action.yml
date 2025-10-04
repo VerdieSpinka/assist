@@ -38,9 +38,9 @@ jobs:
       - name: Sync to Google Drive
         uses: guillep2k/github-to-drive@latest
         with:
-          source: ./ # Direktori sumber (root repositori)
-          destination: master # Nama subfolder di dalam folder Drive Anda
-          delete: true # Hapus file lama di Drive yang tidak ada lagi di repo
+          source: './' # Direktori sumber (root repositori)
+          destination: 'master' # Nama subfolder di dalam folder Drive Anda
+          delete: 'true' # Hapus file lama di Drive yang tidak ada lagi di repo
         env:
           GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}
           GDRIVE_FOLDERID: ${{ vars.GDRIVE_FOLDERID }}
