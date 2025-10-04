@@ -41,8 +41,8 @@ jobs:
         run: npm run all # Menggunakan skrip 'all' dari pertanyaan Anda sebelumnya
 
       # 6. Jalankan action untuk update ke Google Drive
-      - name: Update Guides to Google Drive
-        uses: guillep2k/github-to-drive@latest
+      - name: Sync to Google Drive
+        uses: guillep2k/github-to-drive@v1.0.0
         env:
           GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}
           GDRIVE_FOLDERID: ${{ vars.GDRIVE_FOLDERID }}
