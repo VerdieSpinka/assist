@@ -40,9 +40,9 @@ jobs:
         env:
           GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}
           GDRIVE_FOLDERID: ${{ secrets.GDRIVE_FOLDERID }}
+          GIT_ORIGIN: ${{ secrets.GIT_ORIGIN }}
 
         # Konfigurasi yang dipindahkan dari 'with' ke 'env'
-          GIT_SUBDIR: ./                                  # 'source' menjadi GIT_SUBDIR
-          GDRIVE_SUBFOLDER: master               # 'destination' menjadi GDRIVE_SUBFOLDER
+          GIT_SUBDIR: ./                                  # 'source' menjadi GIT_SUBDIR           # 'destination' menjadi GDRIVE_SUBFOLDER
           DELETE_TARGET_FIRST: true                       # 'delete' menjadi DELETE_TARGET_FIRST
 
