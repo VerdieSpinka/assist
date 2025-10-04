@@ -32,7 +32,5 @@ jobs:
         uses: guillep2k/github-to-drive@latest
         env:
           GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}
-          GDRIVE_FOLDERID: ${{ vars.GDRIVE_FOLDERID }}
-          GIT_ORIGIN: ${{ vars.GIT_ORIGIN }}
-          GIT_SUBDIR: ${{ vars.GIT_SUBDIR }}
-          SLACK_CHANNELS: ${{ secrets.SLACK_CHANNELS }}
+          GDRIVE_FOLDERID: ${{ vars.1pdMRYTDbcMBC2rvMFINxg2OV-9HXD5L9 }}
+          GIT_ORIGIN: ${{ vars.origin/main }}
