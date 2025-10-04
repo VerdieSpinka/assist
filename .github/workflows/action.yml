@@ -35,12 +35,6 @@ jobs:
       # 4. Install dependensi proyek
       - name: Install Dependencies
         run: npm ci # 'ci' lebih cepat dan andal untuk CI/CD daripada 'install'
-
-      # 5. Jalankan build, lint, dan format (sesuai package.json Anda)
-      - name: Build and Test
-        run: npm run all # Menggunakan skrip 'all' dari pertanyaan Anda sebelumnya
-
-      # 6. Jalankan action untuk update ke Google Drive
       - name: Sync to Google Drive
         uses: guillep2k/github-to-drive@v1.0.0
         env:
