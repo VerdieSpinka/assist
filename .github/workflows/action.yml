@@ -37,10 +37,12 @@ jobs:
         run: npm ci # 'ci' lebih cepat dan andal untuk CI/CD daripada 'install'
       - name: Sync to Google Drive
         uses: guillep2k/github-to-drive@latest
-        with:
-          source: './' # Direktori sumber (root repositori)
-          destination: 'master' # Nama subfolder di dalam folder Drive Anda
-          delete: 'true' # Hapus file lama di Drive yang tidak ada lagi di repo
         env:
           GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}
-          GDRIVE_FOLDERID: ${{ vars.GDRIVE_FOLDERID }}
+          GDRIVE_FOLDERID: ${{ secrets.GDRIVE_FOLDERID }}
+
+        # Konfigurasi yang dipindahkan dari 'with' ke 'env'
+          GIT_SUBDIR: ./                                  # 'source' menjadi GIT_SUBDIR
+          GDRIVE_SUBFOLDER: master               # 'destination' menjadi GDRIVE_SUBFOLDER
+          DELETE_TARGET_FIRST: true                       # 'delete' menjadi DELETE_TARGET_FIRST
+
