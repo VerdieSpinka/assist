@@ -1,24 +1,44 @@
 name: CI
-on: 
-  push: 
-    branches:                 # Can use 'branches' or 'tags'
-      - 'main'                # This action only supports one reference
+
+on:
+  push:
+    branches:
+      - 'main'
+
 jobs:
-  build:
+  build-and-sync:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        # ref: main         # Normally not required
-        fetch-depth: 0      # Very important to fetch the whole remote repo!
-        lfs: true           # Make sure to include any required LFS contents, if any
-    - name: Update Guides
-      uses: guillep2k/gitub-to-drive@latest
-      env:
-        GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}           # Always use secrets
-        GDRIVE_FOLDERID: ${{ vars.GDRIVE_FOLDERID }}    # Use secrets or vars accordingly
-        GIT_ORIGIN: ${{ vars.GIT_ORIGIN }}              # Use secrets or vars accordingly
-      # GIT_SUBDIR: ${{ vars.GIT_SUBDIR }}              # Use secrets or vars accordingly
-      # GIT_GLOB: ${{ vars.GIT_GLOB }}                  # Use secrets or vars accordingly
-      # SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}         # Always use secrets
-      # SLACK_CHANNELS: ${{ secrets.SLACK_CHANNELS }}   # Always use secrets
+      # 1. Checkout kode dari repositori
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      # 2. Setup lingkungan Node.js (jika proyek Anda memerlukannya)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Ganti dengan versi Node.js yang sesuai
+
+      # 3. Cache dependensi untuk mempercepat proses
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm # Path untuk cache npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # 4. Install dependensi (jika ada)
+      - name: Install Dependencies
+        run: npm ci # Gunakan 'ci' untuk instalasi yang lebih cepat dan konsisten di server
+
+      # 5. Jalankan action utama untuk sinkronisasi ke Google Drive
+      - name: Sync to Google Drive
+        uses: guillep2k/github-to-drive@latest
+        env:
+          GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}
+          GDRIVE_FOLDERID: ${{ vars.GDRIVE_FOLDERID }}
+          GIT_ORIGIN: ${{ vars.GIT_ORIGIN }}
