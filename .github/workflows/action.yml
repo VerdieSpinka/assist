@@ -6,7 +6,7 @@ on:
       - 'main'
 
 jobs:
-  build-and-sync:
+  build-and-update:
     runs-on: ubuntu-latest
     steps:
       # 1. Checkout kode dari repositori
@@ -16,21 +16,34 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      # 2. Setup lingkungan Node.js (diperlukan oleh banyak action)
+      # 2. Setup lingkungan Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.20' # Ganti dengan versi Node.js yang sesuai
+          node-version: '20' # Ganti dengan versi Node.js proyek Anda
 
-      # 3. Install dependensi jika ada package.json
-      #    Langkah ini penting jika action membutuhkan paket dari npm.
+      # 3. Cache dependensi npm untuk mempercepat instalasi
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        id: npm-cache # Memberi id pada step cache
+        with:
+          path: ~/.npm # Path direktori cache npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # 4. Install dependensi proyek
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci # 'ci' lebih cepat dan andal untuk CI/CD daripada 'install'
 
-      # 4. Jalankan action utama untuk sinkronisasi ke Google Drive
-      - name: Sync to Google Drive
+      # 5. Jalankan build, lint, dan format (sesuai package.json Anda)
+      - name: Build and Test
+        run: npm run all # Menggunakan skrip 'all' dari pertanyaan Anda sebelumnya
+
+      # 6. Jalankan action untuk update ke Google Drive
+      - name: Update Guides to Google Drive
         uses: guillep2k/github-to-drive@latest
         env:
           GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}
-          GDRIVE_FOLDERID: ${{ vars.1pdMRYTDbcMBC2rvMFINxg2OV-9HXD5L9 }}
-          GIT_ORIGIN: ${{ vars.origin/main }}
+          GDRIVE_FOLDERID: ${{ vars.GDRIVE_FOLDERID }}
+          GIT_ORIGIN: ${{ vars.GIT_ORIGIN }}
