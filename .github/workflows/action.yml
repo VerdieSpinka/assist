@@ -1,0 +1,24 @@
+name: CI
+on: 
+  push: 
+    branches:                 # Can use 'branches' or 'tags'
+      - 'main'                # This action only supports one reference
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        # ref: main         # Normally not required
+        fetch-depth: 0      # Very important to fetch the whole remote repo!
+        lfs: true           # Make sure to include any required LFS contents, if any
+    - name: Update Guides
+      uses: guillep2k/gitub-to-drive@latest
+      env:
+        GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}           # Always use secrets
+        GDRIVE_FOLDERID: ${{ vars.GDRIVE_FOLDERID }}    # Use secrets or vars accordingly
+        GIT_ORIGIN: ${{ vars.GIT_ORIGIN }}              # Use secrets or vars accordingly
+      # GIT_SUBDIR: ${{ vars.GIT_SUBDIR }}              # Use secrets or vars accordingly
+      # GIT_GLOB: ${{ vars.GIT_GLOB }}                  # Use secrets or vars accordingly
+      # SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}         # Always use secrets
+      # SLACK_CHANNELS: ${{ secrets.SLACK_CHANNELS }}   # Always use secrets
