@@ -1,0 +1,190 @@
+import i1n from '../i18n';
+import { BASE_API_URL } from '../constants';
+
+// --- 1. Constants ---
+// Menghindari "magic strings" dan mempermudah perubahan jika diperlukan.
+const ACCESS_TOKEN_KEY = 'jaaz_access_token';
+const USER_INFO_KEY = 'jaaz_user_info';
+
+// --- 2. Custom Error Class ---
+// Membuat error kustom untuk penanganan yang lebih baik di sisi UI.
+export class ApiError extends Error {
+  status: number;
+  details: any;
+
+  constructor(message: string, status: number, details: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.details = details;
+  }
+}
+
+// --- 3. Interfaces ---
+// Sedikit perbaikan untuk menghilangkan redundansi.
+export interface UserInfo {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+}
+
+export interface AuthStatus {
+  status: 'logged_out' | 'logged_in';
+  user_info?: UserInfo;
+  tokenExpired?: boolean; // Berguna untuk UI menampilkan pesan spesifik
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user_info: UserInfo;
+}
+
+// Interface untuk payload registrasi agar lebih type-safe
+export interface RegisterPayload extends Pick<UserInfo, 'username' | 'email'> {
+  password: string;
+}
+
+// --- 4. Low-Level Storage Helpers ---
+/**
+ * Menyimpan data autentikasi ke localStorage.
+ */
+export function saveAuthData(token: string, userInfo: UserInfo): void {
+  localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo));
+}
+
+/**
+ * Mengambil token akses dari localStorage.
+ */
+export function getAccessToken(): string | null {
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+/**
+ * Membersihkan data autentikasi dari localStorage.
+ */
+export function clearAuthData(): void {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(USER_INFO_KEY);
+}
+
+// --- 5. Core API Wrapper ---
+/**
+ * Wrapper untuk fetch() yang secara otomatis menyertakan token autentikasi.
+ * Juga menangani error HTTP dan melempar ApiError.
+ * @throws {ApiError} Jika respons server tidak ok (status >= 400).
+ */
+export async function authenticatedFetch(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const token = getAccessToken();
+  const headers = new Headers(options.headers || {});
+  
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  // Pastikan URL adalah path relatif untuk API lokal kita
+  const apiUrl = url.startsWith('/') ? url : `/${url}`;
+
+  const response = await fetch(`${BASE_API_URL}${apiUrl}`, { ...options, headers });
+
+  if (!response.ok) {
+    const errorDetails = await response.json().catch(() => ({ detail: 'Unknown server error' }));
+    throw new ApiError(
+      errorDetails.detail || 'An error occurred',
+      response.status,
+      errorDetails
+    );
+  }
+
+  return response;
+}
+
+// --- 6. Public API Functions ---
+
+/**
+ * Mengirim permintaan registrasi pengguna baru.
+ * @throws {ApiError}
+ */
+export async function registerUser(payload: RegisterPayload): Promise<UserInfo> {
+  const response = await authenticatedFetch('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+}
+
+/**
+ * Mengirim permintaan login dan menyimpan data jika berhasil.
+ * @throws {ApiError}
+ */
+export async function loginUser(username: string, password: string): Promise<TokenResponse> {
+  const formData = new URLSearchParams();
+  formData.append('username', username);
+  formData.append('password', password);
+
+  // Menggunakan fetch biasa karena ini belum terautentikasi
+  const data: TokenResponse = await response.json();
+  // saveAuthData(data.access_token, data.user_info); // <-- DIHAPUS
+  return data;
+}
+
+  const data: TokenResponse = await response.json();
+  saveAuthData(data.access_token, data.user_info);
+  return data;
+}
+
+/**
+ * Memeriksa dan memvalidasi status autentikasi pengguna saat ini.
+ */
+export async function getAuthStatus(): Promise<AuthStatus> {
+  const token = getAccessToken();
+  const userInfoStr = localStorage.getItem(USER_INFO_KEY);
+
+  if (!token || !userInfoStr) {
+    return { status: 'logged_out' };
+  }
+
+  try {
+    const response = await authenticatedFetch('/api/auth/me');
+    const userFromServer: UserInfo = await response.json();
+    
+    // Perbarui info pengguna di localStorage untuk sinkronisasi
+    localStorage.setItem(USER_INFO_KEY, JSON.stringify(userFromServer));
+
+    return { status: 'logged_in', user_info: userFromServer };
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+      // Token tidak valid atau kadaluwarsa
+      clearAuthData();
+      return { status: 'logged_out', tokenExpired: true };
+    }
+    
+    // Asumsikan offline jika error lain (misal, network error)
+    console.warn("Could not validate token, assuming offline but logged in.", error);
+    try {
+      const userInfo: UserInfo = JSON.parse(userInfoStr);
+      return { status: 'logged_in', user_info: userInfo };
+    } catch {
+      // Data di localStorage korup
+      clearAuthData();
+      return { status: 'logged_out' };
+    }
+  }
+}
+
+/**
+ * Melakukan logout dengan membersihkan data dari localStorage.
+ * Fungsi ini sinkron karena tidak ada operasi I/O yang ditunggu.
+ */
+export function logoutUser(): void {
+  clearAuthData();
+}
