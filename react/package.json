@@ -23,7 +23,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@excalidraw/excalidraw": "",
+    "@excalidraw/excalidraw": "^0.18.0",
     "@mdxeditor/editor": "^3.32.2",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-checkbox": "^1.3.1",
