@@ -91,6 +91,12 @@
   filter: none !important;
 }
 
+/* Custom dark mode fix */
+.excalidraw.excalidraw-dark-fix {
+  /* Remove all filter effects that cause color inversion */
+  filter: none !important;
+}
+
 /* 为自定义深色模式设置适当的颜色 */
 .excalidraw-custom.excalidraw-dark-fix {
   --color-primary: #f5f5f5 !important;

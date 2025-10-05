@@ -4,9 +4,11 @@ Contains the main orchestration logic for image generation across different prov
 """
 
 from typing import Optional, Dict, Any
+from fastapi import HTTPException # Tambahkan impor ini
 from common import DEFAULT_PORT
 from tools.utils.image_utils import process_input_image
 from ..image_providers.image_base_provider import ImageProviderBase
+from services.db_service import db_service # Tambahkan impor ini
 
 # 导入所有提供商以确保自动注册 (不要删除这些导入)
 from ..image_providers.jaaz_provider import JaazImageProvider
@@ -35,26 +37,23 @@ async def generate_image_with_provider(
     session_id: str,
     provider: str,
     model: str,
-    # image generator args
     prompt: str,
     aspect_ratio: str = "1:1",
     input_images: Optional[list[str]] = None,
+    user_id: Optional[int] = None # Tambahkan user_id
 ) -> str:
     """
-    通用图像生成函数，支持不同的模型和提供商
-
-    Args:
-        prompt: 图像生成提示词
-        aspect_ratio: 图像长宽比
-        model_name: 内部模型名称 (如 'gpt-image-1', 'imagen-4')
-        model: 模型标识符 (如 'openai/gpt-image-1', 'google/imagen-4')
-        tool_call_id: 工具调用ID
-        config: 上下文运行配置，包含canvas_id，session_id，model_info，由langgraph注入
-        input_images: 可选的输入参考图像列表
-
-    Returns:
-        str: 生成结果消息
+    Fungsi pembuatan gambar universal...
     """
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User authentication required for image generation.")
+
+    # --- PENERAPAN PEMERIKSAAN KREDIT ---
+    can_generate = await db_service.check_and_update_credits(user_id)
+    if not can_generate:
+        raise HTTPException(status_code=429, detail="Batas pembuatan gambar harian telah tercapai.")
+    # --- AKHIR PEMERIKSAAN ---
 
     provider_instance = IMAGE_PROVIDERS.get(provider)
     if not provider_instance:

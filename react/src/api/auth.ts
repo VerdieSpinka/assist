@@ -2,12 +2,10 @@ import i1n from '../i18n';
 import { BASE_API_URL } from '../constants';
 
 // --- 1. Constants ---
-// Menghindari "magic strings" dan mempermudah perubahan jika diperlukan.
 const ACCESS_TOKEN_KEY = 'jaaz_access_token';
 const USER_INFO_KEY = 'jaaz_user_info';
 
 // --- 2. Custom Error Class ---
-// Membuat error kustom untuk penanganan yang lebih baik di sisi UI.
 export class ApiError extends Error {
   status: number;
   details: any;
@@ -21,18 +19,18 @@ export class ApiError extends Error {
 }
 
 // --- 3. Interfaces ---
-// Sedikit perbaikan untuk menghilangkan redundansi.
 export interface UserInfo {
   id: number;
   username: string;
   email: string;
   role: string;
+  image_url?: string; // Menambahkan field opsional untuk avatar
 }
 
 export interface AuthStatus {
-  status: 'logged_out' | 'logged_in';
+  is_logged_in: boolean;
   user_info?: UserInfo;
-  tokenExpired?: boolean; // Berguna untuk UI menampilkan pesan spesifik
+  tokenExpired?: boolean;
 }
 
 export interface TokenResponse {
@@ -41,45 +39,54 @@ export interface TokenResponse {
   user_info: UserInfo;
 }
 
-// Interface untuk payload registrasi agar lebih type-safe
 export interface RegisterPayload extends Pick<UserInfo, 'username' | 'email'> {
   password: string;
 }
 
-// --- 4. Low-Level Storage Helpers ---
-/**
- * Menyimpan data autentikasi ke localStorage.
- */
-export function saveAuthData(token: string, userInfo: UserInfo): void {
-  localStorage.setItem(ACCESS_TOKEN_KEY, token);
-  localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo));
+// --- 4. Low-Level Storage Helpers (dibuat private) ---
+function saveAuthData(token: string, userInfo: UserInfo): void {
+  try {
+    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+    localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo));
+  } catch (error) {
+    console.error("Failed to save auth data to localStorage:", error);
+  }
 }
 
-/**
- * Mengambil token akses dari localStorage.
- */
-export function getAccessToken(): string | null {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+function getAccessToken(): string | null {
+  try {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
+  } catch (error) {
+    console.error("Failed to get access token from localStorage:", error);
+    return null;
+  }
 }
 
-/**
- * Membersihkan data autentikasi dari localStorage.
- */
-export function clearAuthData(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(USER_INFO_KEY);
+function clearAuthData(): void {
+  try {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(USER_INFO_KEY);
+  } catch (error) {
+    console.error("Failed to clear auth data from localStorage:", error);
+  }
 }
 
-// --- 5. Core API Wrapper ---
-/**
- * Wrapper untuk fetch() yang secara otomatis menyertakan token autentikasi.
- * Juga menangani error HTTP dan melempar ApiError.
- * @throws {ApiError} Jika respons server tidak ok (status >= 400).
- */
-export async function authenticatedFetch(
-  url: string,
-  options: RequestInit = {}
-): Promise<Response> {
+// --- 5. Core API Wrappers ---
+async function fetchWrapper(url: string, options: RequestInit = {}): Promise<Response> {
+  const response = await fetch(url, options);
+
+  if (!response.ok) {
+    const errorDetails = await response.json().catch(() => ({ detail: 'An unknown server error occurred.' }));
+    throw new ApiError(
+      errorDetails.detail || 'An error occurred',
+      response.status,
+      errorDetails
+    );
+  }
+  return response;
+}
+
+export async function authenticatedFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const token = getAccessToken();
   const headers = new Headers(options.headers || {});
   
@@ -90,115 +97,83 @@ export async function authenticatedFetch(
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-
-  // Pastikan URL adalah path relatif untuk API lokal kita
-  const apiUrl = url.startsWith('/') ? url : `/${url}`;
-
-  const response = await fetch(`${BASE_API_URL}${apiUrl}`, { ...options, headers });
-
-  if (!response.ok) {
-    const errorDetails = await response.json().catch(() => ({ detail: 'Unknown server error' }));
-    throw new ApiError(
-      errorDetails.detail || 'An error occurred',
-      response.status,
-      errorDetails
-    );
-  }
-
-  return response;
+  
+  // Memastikan endpoint diawali dengan '/' untuk konsistensi
+  const apiUrl = `${BASE_API_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  return fetchWrapper(apiUrl, { ...options, headers });
 }
 
 // --- 6. Public API Functions ---
 
-/**
- * Mengirim permintaan registrasi pengguna baru.
- * @throws {ApiError}
- */
 export async function registerUser(payload: RegisterPayload): Promise<UserInfo> {
-  const response = await authenticatedFetch('/api/auth/register', {
+  // Registrasi tidak terotentikasi, jadi gunakan fetchWrapper langsung
+  const response = await fetchWrapper(`${BASE_API_URL}/api/auth/register`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
   return response.json();
 }
 
-/**
- * Mengirim permintaan login dan menyimpan data jika berhasil.
- * @throws {ApiError}
- */
 export async function loginUser(username: string, password: string): Promise<TokenResponse> {
   const formData = new URLSearchParams();
   formData.append('username', username);
   formData.append('password', password);
 
-  // Menggunakan fetch biasa karena ini belum terautentikasi
-  const response = await fetch('/api/auth/token', {
+  // Login tidak terotentikasi
+  const response = await fetchWrapper(`${BASE_API_URL}/api/auth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: formData,
   });
 
-  if (!response.ok) {
-    const errorDetails = await response.json().catch(() => ({ detail: 'Login failed' }));
-    throw new ApiError(
-      errorDetails.detail || 'Incorrect username or password',
-      response.status,
-      errorDetails
-    );
-  }
-
   const data: TokenResponse = await response.json();
+  // Fungsi login sekarang bertanggung jawab untuk menyimpan data
   saveAuthData(data.access_token, data.user_info);
   return data;
 }
 
-/**
- * Memeriksa dan memvalidasi status autentikasi pengguna saat ini.
- */
 export async function getAuthStatus(): Promise<AuthStatus> {
   const token = getAccessToken();
-  const userInfoStr = localStorage.getItem(USER_INFO_KEY);
-
-  if (!token || !userInfoStr) {
-    return { status: 'logged_out' };
+  if (!token) {
+    return { is_logged_in: false };
   }
 
   try {
-    const response = await authenticatedFetch('/api/auth/me');
+    const response = await authenticatedFetch('api/auth/me');
     const userFromServer: UserInfo = await response.json();
     
-    // Perbarui info pengguna di localStorage untuk sinkronisasi
+    // Segarkan info pengguna di localStorage agar tetap sinkron
     localStorage.setItem(USER_INFO_KEY, JSON.stringify(userFromServer));
 
-    return { status: 'logged_in', user_info: userFromServer };
+    return { is_logged_in: true, user_info: userFromServer };
   } catch (error) {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-      // Token tidak valid atau kadaluwarsa
+      // Token tidak valid atau kedaluwarsa
       clearAuthData();
-      return { status: 'logged_out', tokenExpired: true };
+      return { is_logged_in: false, tokenExpired: true };
     }
     
-    // Asumsikan offline jika error lain (misal, network error)
-    console.warn("Could not validate token, assuming offline but logged in.", error);
+    // Tangani kasus offline: asumsikan pengguna login dengan data cache
+    console.warn("Could not validate token online, assuming offline but logged in.", error);
+    const userInfoStr = localStorage.getItem(USER_INFO_KEY);
     try {
-      const userInfo: UserInfo = JSON.parse(userInfoStr);
-      return { status: 'logged_in', user_info: userInfo };
+      if (userInfoStr) {
+        const userInfo: UserInfo = JSON.parse(userInfoStr);
+        return { is_logged_in: true, user_info: userInfo };
+      }
     } catch {
-      // Data di localStorage korup
+      // Data di localStorage rusak
       clearAuthData();
-      return { status: 'logged_out' };
+      return { is_logged_in: false };
     }
+    
+    // Default ke logout jika semua gagal
+    clearAuthData();
+    return { is_logged_in: false };
   }
 }
 
-/**
- * Melakukan logout dengan membersihkan data dari localStorage.
- * Fungsi ini sinkron karena tidak ada operasi I/O yang ditunggu.
- */
-export function logout(): { status: string; message: string } {
+export function logoutUser(): void {
   clearAuthData();
-  return {
-    status: 'success',
-    message: i1n.t('common:auth.logoutSuccessMessage'),
-  };
 }

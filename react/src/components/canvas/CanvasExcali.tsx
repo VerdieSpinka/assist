@@ -128,33 +128,30 @@ const CanvasExcali: React.FC<CanvasExcaliProps> = ({
   )
   const { theme } = useTheme()
 
-  // 添加自定义类名以便应用我们的CSS修复
+  // Custom class to apply our CSS fixes
   const excalidrawClassName = `excalidraw-custom ${theme === 'dark' ? 'excalidraw-dark-fix' : ''}`
   
-  // 在深色模式下使用自定义主题设置，避免使用默认的滤镜
-  // 这样可以确保颜色在深色模式下正确显示
+  // To avoid Excalidraw's default dark mode filter, we use 'light' theme
+  // and apply our own dark theme styles via CSS.
   const customTheme = theme === 'dark' ? 'light' : theme
-  
-  // 在组件挂载和主题变化时设置深色模式下的背景色
+
+  // Set the background color explicitly when the theme changes or API is ready
   useEffect(() => {
-    if (excalidrawAPI && theme === 'dark') {
-      // 设置深色背景，但保持light主题以避免颜色反转
-      excalidrawAPI.updateScene({
-        appState: {
-          viewBackgroundColor: '#121212',
-          gridColor: 'rgba(255, 255, 255, 0.1)',
-        }
-      })
-    } else if (excalidrawAPI && theme === 'light') {
-      // 恢复浅色背景
-      excalidrawAPI.updateScene({
-        appState: {
-          viewBackgroundColor: '#ffffff',
-          gridColor: 'rgba(0, 0, 0, 0.1)',
-        }
-      })
-    }
-  }, [excalidrawAPI, theme])
+    if (!excalidrawAPI) return;
+
+    const appStateUpdate =
+      theme === 'dark'
+        ? {
+            viewBackgroundColor: '#1e1e1e', // A slightly off-black for better contrast
+            gridColor: 'rgba(255, 255, 255, 0.08)',
+          }
+        : {
+            viewBackgroundColor: '#ffffff',
+            gridColor: 'rgba(0, 0, 0, 0.08)',
+          };
+
+    excalidrawAPI.updateScene({ appState: appStateUpdate });
+  }, [excalidrawAPI, theme]);
 
   const addImageToExcalidraw = useCallback(
     async (imageElement: ExcalidrawImageElement, file: BinaryFileData) => {

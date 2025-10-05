@@ -27,6 +27,9 @@ type ConfigsStore = {
   showLoginDialog: boolean
   setShowLoginDialog: (show: boolean) => void
 
+  showProfileSettingsDialog: boolean; // Add this
+  setShowProfileSettingsDialog: (show: boolean) => void; // Add this
+
   allTools: ToolInfo[]
   setAllTools: (tools: ToolInfo[]) => void
 
@@ -57,6 +60,9 @@ const useConfigsStore = create<ConfigsStore>((set) => ({
 
   showLoginDialog: false,
   setShowLoginDialog: (show) => set({ showLoginDialog: show }),
+
+  showProfileSettingsDialog: false, // Add this
+  setShowProfileSettingsDialog: (show) => set({ showProfileSettingsDialog: show }), // Add this
 
   providers: {},
   setProviders: (providers) => set({ providers }),

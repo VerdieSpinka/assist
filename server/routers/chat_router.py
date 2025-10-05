@@ -1,28 +1,18 @@
 #server/routers/chat_router.py
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from services.chat_service import handle_chat
 from services.magic_service import handle_magic
 from services.stream_service import get_stream_task
-from typing import Dict
+from .auth_router import get_current_user # Tambahkan impor ini
+from typing import Dict, Any
 
 router = APIRouter(prefix="/api")
 
 @router.post("/chat")
-async def chat(request: Request):
-    """
-    Endpoint to handle chat requests.
-
-    Receives a JSON payload from the client, passes it to the chat handler,
-    and returns a success status.
-
-    Request body:
-        JSON object containing chat data.
-
-    Response:
-        {"status": "done"}
-    """
+async def chat(request: Request, current_user: Dict[str, Any] = Depends(get_current_user)):
     data = await request.json()
-    await handle_chat(data)
+    user_id = current_user.get('id')
+    await handle_chat(data, user_id) # Salurkan user_id
     return {"status": "done"}
 
 @router.post("/cancel/{session_id}")

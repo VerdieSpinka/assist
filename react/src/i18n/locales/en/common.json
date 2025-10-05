@@ -72,7 +72,9 @@
     "logoutSuccessMessage": "Successfully logged out",
     "notLoggedIn": "Not logged in",
     "balance": "Balance",
-    "recharge": "Recharge"
+    "recharge": "Recharge",
+    "profileSettings": "Profile Settings",
+    "creditsLeft": "Image Credits: {{count}}"
   },
   "socket": {
     "connectionError": "Connection error ({{current}}/{{max}}): {{error}}",

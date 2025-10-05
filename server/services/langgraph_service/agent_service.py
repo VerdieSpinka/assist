@@ -81,18 +81,9 @@ async def langgraph_multi_agent(
     session_id: str,
     text_model: ModelInfo,
     tool_list: List[ToolInfoJson],
-    system_prompt: Optional[str] = None
+    system_prompt: Optional[str] = None,
+    user_id: Optional[int] = None # Tambahkan parameter user_id
 ) -> None:
-    """多智能体处理函数
-
-    Args:
-        messages: 消息历史
-        canvas_id: 画布ID
-        session_id: 会话ID
-        text_model: 文本模型配置
-        tool_list: 工具模型配置列表（图像或视频模型）
-        system_prompt: 系统提示词
-    """
     try:
         # 0. 修复消息历史
         fixed_messages = _fix_chat_history(messages)
@@ -124,11 +115,12 @@ async def langgraph_multi_agent(
             'canvas_id': canvas_id,
             'session_id': session_id,
             'tool_list': tool_list,
+            'user_id': user_id, # Tambahkan user_id ke konteks
         }
 
-        # 6. 流处理
+        # 5. Proses stream
         processor = StreamProcessor(
-            session_id, db_service, send_to_websocket)  # type: ignore
+            session_id, db_service, send_to_websocket)
         await processor.process_stream(swarm, fixed_messages, context)
 
     except Exception as e:

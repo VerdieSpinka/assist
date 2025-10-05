@@ -6,10 +6,14 @@ import io
 import asyncio
 from dotenv import load_dotenv
 
-# --- PERUBAHAN DI SINI ---
-# Muat variabel lingkungan dari file .env di direktori saat ini
-load_dotenv()
-# --- AKHIR PERUBAHAN ---
+# Load environment variables from a .env file at the project root.
+# This should be one of the first things done to ensure all modules have access to them.
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(dotenv_path):
+    print(f"Loading environment variables from: {dotenv_path}")
+    load_dotenv(dotenv_path=dotenv_path)
+else:
+    print("Warning: .env file not found. Relying on system environment variables.")
 
 # Pastikan stdout dan stderr menggunakan encoding utf-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
